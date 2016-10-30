@@ -1,0 +1,78 @@
+---
+title: "Malaysia Population 2010"
+author: "Daniel Lee"
+date: "10/30/2016"
+output: 
+  html_document:
+          toc: TRUE
+          toc_depth: 3
+          toc_float: TRUE
+          
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Executive Summary
+
+This exercise is to showcase one of many use cases of the `leaflet` interactive mapping visualisation package. We will use Malaysia 2010 population visualisation as our use case here. 
+
+## Technical Pre-requisite
+
+The following packages are required to reproduce and run this use case.
+
+```{r 'library', eval=T, warning=FALSE, message=F}
+require(ggmap);require(leaflet);require(magrittr);require(data.table)
+
+```
+
+## Data preparation
+
+The population density and urbanisation data was acquired from [wikipedia](https://en.wikipedia.org/wiki/Demographics_of_Malaysia). We first load the data into a dataframe.
+
+```{r 'data_preparation'}
+State <- c('Johor','Kedah','Kelantan','Malacca','Negeri Sembilan','Pahang','Penang','Perak','Perlis','Selangor','Terengganu','Sabah','Sarawak','Kuala Lumpur','Labuan','Putrajaya')
+
+Pop.dens <- c(174, 199, 97, 470, 150, 40, 1500, 110, 280, 670, 69, 42, 19, 6891, 950, 1400)
+
+Urban.rate <- c(71.9, 64.6, 42.4, 86.5, 66.5, 50.5, 90.8, 69.7, 51.4, 91.4, 59.1, 54.0, 53.8, 100.0, 82.3, 100.0)
+```
+
+Next we need to obtain the coordinate of the states. This is being done by leveraging on `ggmap` package. However, the google API will be triggered everytime the code is being executed. Hence we will just manually copy the result from the API and store it in R.
+
+```{r 'get_coord'}
+lon <- c(103.7618154,100.3684595,102.238071,102.2500868,101.9423782,103.3256204,100.3287589,101.090109,100.2047691,101.5183469,103.1324154,116.0753199,110.3592127,101.686855,115.230825,101.696445)
+
+lat <- c(1.4853682,6.1183964,6.1253969,2.189594,2.7258058,3.8126318,5.4141675,4.5921126,6.4449129,3.0738379,5.3116916,5.9788398,1.5532783,3.139003,5.2831456,2.926361)
+```
+
+Now we can create a dataframe that contains all the information that we need to visualise it in leaflet.
+
+```{r 'create_dataframe'}
+mydata <- data.table(state = State, pop.dens = Pop.dens, urban.rate = Urban.rate, lon = lon, lat = lat)
+
+## transform the population density value to the range of 0 and 1 for color mapping
+mydata[, color:= (pop.dens - min(pop.dens))/diff(range(pop.dens))]
+
+## create the pop up description and urbanisation rate
+mydata[, popup:= paste0(state, '<br>Population density: ', pop.dens, ' capita/km2', '<br>Urbanisation %: ', urban.rate)]
+```
+
+## Visualisation in leaflet
+
+We will now visualise the population data in leaflet.
+
+```{r 'visualise'}
+
+## define a color function to map the population density to a color
+
+f.color <- colorRamp(c(c('green','red')))
+
+leaflet(mydata) %>% addTiles() %>% addCircles(weight = 1, radius = 30000, color = f.color(mydata$color) %>% rgb(maxColorValue = 256)) %>% addMarkers(popup = mydata$popup)
+```
+
+
+
+
+
